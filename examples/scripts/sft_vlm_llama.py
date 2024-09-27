@@ -1,3 +1,28 @@
+"""
+pip3 install accelerate
+pip3 install git+https://github.com/huggingface/transformers.git@main
+pip3 show transformers
+pip3 install --upgrade Pillow
+pip3 install git+https://github.com/huggingface/trl.git
+pip3 install deepspeed
+pip3 install --upgrade jinja2
+pip3 install wandb
+git clone https://https://github.com/hu-po/trl.git
+huggingface-cli login
+wandb login
+accelerate launch \
+    --config_file=examples/accelerate_configs/deepspeed_zero3.yaml \
+    examples/scripts/sft_vlm_llama.py \
+    --dataset_name hu-po/rings-10k \
+    --model_name_or_path meta-llama/Llama-3.2-11B-Vision-Instruct \
+    --per_device_train_batch_size 8 \
+    --gradient_accumulation_steps 8 \
+    --output_dir sft-llama-11b-hf \
+    --bf16 \
+    --torch_dtype bfloat16 \
+    --gradient_checkpointing
+"""
+
 import torch
 from datasets import load_dataset
 from transformers import AutoModelForVision2Seq, AutoProcessor, LlavaForConditionalGeneration
@@ -12,7 +37,6 @@ from trl import (
     get_peft_config,
     get_quantization_config,
 )
-
 
 if __name__ == "__main__":
     parser = TrlParser((SFTScriptArguments, SFTConfig, ModelConfig))
@@ -50,6 +74,31 @@ if __name__ == "__main__":
     # Create a data collator to encode text and image pairs
     ################
     def collate_fn(examples):
+        # Modify the messages to match the expected format
+        for example in examples:
+            messages = []
+            content_list = example["messages"]["content"]
+            role_list = example["messages"]["role"]
+            for i in range(len(role_list)):
+                message = {
+                    "role": role_list[i],
+                    "content": []
+                }
+                content_item = content_list[i]
+                num_contents = len(content_item["type"])
+                for j in range(num_contents):
+                    content = {
+                        "index": content_item["index"][j],
+                        "text": content_item["text"][j],
+                        "type": content_item["type"][j]
+                    }
+                    message["content"].append(content)
+                messages.append(message)
+            example["messages"] = messages
+            # Ensure images are in a list
+            if not isinstance(example["images"], list):
+                example["images"] = [example["images"]]
+
         # Get the texts and images, and apply the chat template
         texts = [processor.apply_chat_template(example["messages"], tokenize=False) for example in examples]
         images = [example["images"] for example in examples]
