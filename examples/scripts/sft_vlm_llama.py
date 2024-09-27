@@ -75,7 +75,12 @@ if __name__ == "__main__":
     ################
     def collate_fn(examples):
         # Modify the messages to match the expected format
-        for example in examples:
+        for idx, example in enumerate(examples):
+            if idx < 3:  # Only print the first 3 examples
+                print(f"\nExample {idx} before modification:")
+                print("messages:", example["messages"])
+                print("images:", example["images"])
+
             messages = []
             content_list = example["messages"]["content"]
             role_list = example["messages"]["role"]
@@ -98,6 +103,11 @@ if __name__ == "__main__":
             # Ensure images are in a list
             if not isinstance(example["images"], list):
                 example["images"] = [example["images"]]
+
+            if idx < 3:  # Only print the first 3 examples
+                print(f"Example {idx} after modification:")
+                print("messages:", example["messages"])
+                print("images:", example["images"])
 
         # Get the texts and images, and apply the chat template
         texts = [processor.apply_chat_template(example["messages"], tokenize=False) for example in examples]
