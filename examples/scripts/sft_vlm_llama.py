@@ -7,18 +7,20 @@ pip3 install git+https://github.com/huggingface/trl.git
 pip3 install deepspeed
 pip3 install --upgrade jinja2
 pip3 install wandb
-git clone https://https://github.com/hu-po/trl.git
+git clone https://github.com/hu-po/trl.git
 huggingface-cli login
 wandb login
 accelerate launch \
-    --config_file=examples/accelerate_configs/deepspeed_zero3.yaml \
-    examples/scripts/sft_vlm_llama.py \
-    --dataset_name hu-po/rings-10k \
+    trl/examples/scripts/sft_vlm_llama.py \
     --model_name_or_path meta-llama/Llama-3.2-11B-Vision-Instruct \
+    --dataset_name hu-po/rings-10k \
+    --learning_rate 1e-5 \
     --per_device_train_batch_size 8 \
     --gradient_accumulation_steps 8 \
-    --output_dir sft-llama-11b-hf \
+    --gradient_checkpointing \
+    --output_dir sft-llama3.2-11b \
     --bf16 \
+    --logging_steps 10 \
     --torch_dtype bfloat16 \
     --gradient_checkpointing
 """
@@ -26,6 +28,7 @@ accelerate launch \
 import torch
 from datasets import load_dataset
 from transformers import AutoModelForVision2Seq, AutoProcessor, LlavaForConditionalGeneration
+from PIL import Image
 
 from trl import (
     ModelConfig,
@@ -103,6 +106,15 @@ if __name__ == "__main__":
             # Ensure images are in a list
             if not isinstance(example["images"], list):
                 example["images"] = [example["images"]]
+
+            # Resize images
+            image_size = (1120, 1120)
+            resized_images = []
+            for image in example["images"]:
+                if image.size != image_size:
+                    image = image.resize(image_size, resample=Image.BICUBIC)
+                resized_images.append(image)
+            example["images"] = resized_images
 
             if idx < 3:  # Only print the first 3 examples
                 print(f"Example {idx} after modification:")
