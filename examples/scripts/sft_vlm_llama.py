@@ -7,15 +7,16 @@ pip3 install git+https://github.com/huggingface/trl.git
 pip3 install deepspeed
 pip3 install --upgrade jinja2
 pip3 install wandb
+pip3 install --pre torch torchvision torchaudio --index-url https://download.pytorch.org/whl/nightly/cu121
 git clone https://github.com/hu-po/trl.git
 huggingface-cli login
 wandb login
 accelerate launch \
-    trl/examples/scripts/sft_vlm_llama.py \
+    examples/scripts/sft_vlm_llama.py \
     --model_name_or_path meta-llama/Llama-3.2-11B-Vision-Instruct \
     --dataset_name hu-po/rings-10k \
     --learning_rate 1e-5 \
-    --per_device_train_batch_size 8 \
+    --per_device_train_batch_size 1 \
     --gradient_accumulation_steps 8 \
     --gradient_checkpointing \
     --output_dir sft-llama3.2-11b \
